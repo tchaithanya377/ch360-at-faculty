@@ -1,80 +1,72 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase"; // Firebase configuration
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams } from "react-router-dom"; // React Router to get dynamic courseId from URL
 
 const StudentList = () => {
   const { courseId } = useParams(); // Get courseId from URL parameters
 
-  // State to store students data
   const [students, setStudents] = useState([]);
   const [error, setError] = useState(null);
+  const [facultyId, setFacultyId] = useState(null);
+  const [fetchedCourses, setFetchedCourses] = useState([]); // Track fetched courses
 
-  // Fetch attendance data based on faculty ID and course ID
-  const fetchAttendanceData = async (facultyId) => {
+  // Fetch the list of students from a specific timetable
+  const fetchTimetableStudents = async (facultyId) => {
     try {
-      const attendancePath = `attendance/III/A/${facultyId}/courses/${courseId}`;
-      console.log(`Attendance Path: ${attendancePath}`);  // Debugging output for the path
-      const attendanceDocRef = doc(db, attendancePath);
-      const attendanceDocSnap = await getDoc(attendanceDocRef);
-  
-      if (!attendanceDocSnap.exists()) {
-        console.error("Attendance document not found.");
-        setError("Attendance document not found.");
-        return;
-      }
-  
-      const attendanceData = attendanceDocSnap.data();
-      console.log("Fetched Attendance Data:", attendanceData);  // Debugging output for fetched data
-  
-      const { attendanceHistory } = attendanceData;
-      if (!attendanceHistory || !Array.isArray(attendanceHistory)) {
-        console.error("No valid attendance history found.");
-        setError("No valid attendance history found.");
-        return;
-      }
-  
-      // Use a Set to track unique students by their roll number
-      const uniqueStudents = new Map();
-  
-      attendanceHistory.forEach((record, index) => {
-        console.log(`Processing attendance record ${index + 1}:`, record);  // Debugging output for each attendance record
-        if (record.attendance && Array.isArray(record.attendance)) {
-          record.attendance.forEach((student) => {
-            console.log(`Processing student: ${student.rollNo}, ${student.name}`);  // Debugging output for each student
-            if (student.rollNo && student.name) {
-              if (!uniqueStudents.has(student.rollNo)) {
-                uniqueStudents.set(student.rollNo, {
-                  rollNo: student.rollNo,
-                  name: student.name,
-                });
-                console.log(`Added new student: ${student.rollNo}, ${student.name}`); // Debugging output for new student addition
-              }
-            }
-          });
-        } else {
-          console.warn(`No attendance array found in record ${index + 1}.`);
+      const timetableRef = collection(db, "timetables/III/A");
+      const querySnapshot = await getDocs(timetableRef);
+      const studentIds = [];
+
+      querySnapshot.forEach((docSnap) => {
+        const timetableData = docSnap.data();
+        if (timetableData.facultyId === facultyId && !fetchedCourses.includes(timetableData.courseId)) {
+          setFetchedCourses((prevCourses) => [...prevCourses, timetableData.courseId]); // Mark this course as fetched
+          studentIds.push(...timetableData.studentIds);  // Collecting all student IDs from the timetable data
         }
       });
-  
-      const studentsList = Array.from(uniqueStudents.values());
-      console.log("Unique Students List:", studentsList);  // Debugging output for final unique students list
-  
-      if (studentsList.length > 0) {
-        setStudents(studentsList); // Update state with the students list if there are any
+
+      if (studentIds.length > 0) {
+        fetchStudentsByIds(studentIds);
       } else {
-        console.warn("No students found in the attendance records.");
-        setError("No students found in the attendance records.");
+        console.error("No students found for this faculty.");
+        setError("No students found for this faculty.");
       }
     } catch (err) {
-      console.error("Error fetching attendance data:", err.message);
-      setError("Error fetching attendance data.");
+      console.error("Error fetching timetable data:", err.message);
+      setError("Error fetching timetable data.");
     }
   };
 
-  // Fetch students based on the logged-in faculty's attendance records
-  const fetchStudentsByFaculty = async () => {
+  // Fetch student details based on student IDs
+  const fetchStudentsByIds = async (studentIds) => {
+    try {
+      const studentPromises = studentIds.map((id) =>
+        getDoc(doc(db, "students", id))  // Assuming each student has a document in "students" collection
+      );
+      const studentDocs = await Promise.all(studentPromises);
+
+      const fetchedStudents = studentDocs.map((studentDoc) => {
+        if (studentDoc.exists()) {
+          const studentData = studentDoc.data();
+          return {
+            rollNo: studentData.rollNo,
+            name: studentData.name,
+          };
+        }
+        return null;
+      }).filter((student) => student !== null);
+
+      setStudents(fetchedStudents);
+    } catch (err) {
+      console.error("Error fetching student details:", err.message);
+      setError("Error fetching student details.");
+    }
+  };
+
+  // Fetch faculty and timetable data
+  const fetchFacultyData = async () => {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         console.error("No user is logged in.");
@@ -83,15 +75,15 @@ const StudentList = () => {
       }
 
       console.log(`Logged in as user: ${user.uid}`);  // Debugging output for logged-in user
-      await fetchAttendanceData(user.uid); // Fetch attendance data using facultyId
+      setFacultyId(user.uid);
+      await fetchTimetableStudents(user.uid); // Fetch students based on faculty ID
     });
   };
 
-  // Trigger fetching students when the component mounts
   useEffect(() => {
     if (courseId) {
       console.log(`Course ID received: ${courseId}`);  // Debugging output for course ID
-      fetchStudentsByFaculty();
+      fetchFacultyData();
     } else {
       console.error("No course ID provided.");
       setError("No course ID provided.");
@@ -119,6 +111,7 @@ const StudentList = () => {
               <tr>
                 <th className="px-4 py-2 text-left">Roll No</th>
                 <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-left">View Details</th>
               </tr>
             </thead>
             <tbody>
@@ -126,6 +119,14 @@ const StudentList = () => {
                 <tr key={student.rollNo}>
                   <td className="px-4 py-2">{student.rollNo}</td>
                   <td className="px-4 py-2">{student.name}</td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => alert(`Viewing details for ${student.name}`)}  // Handle the details view logic
+                      className="text-blue-500 hover:text-blue-700"
+                    >
+                      View Details
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

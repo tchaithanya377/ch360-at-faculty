@@ -5,6 +5,7 @@ import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, collection, getDocs, query, where, setDoc, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns'; // Import date-fns for date formatting
+import ClipLoader from "react-spinners/ClipLoader"; // Importing the spinner component from react-spinners
 
 const AttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -164,6 +165,7 @@ const AttendancePage = () => {
       setLoading(false);
     }
   };
+
   const handleStatusChange = (studentId, status) => {
     setAttendance((prev) =>
       prev.map((student) => (student.id === studentId ? { ...student, status } : student))
@@ -292,90 +294,99 @@ const AttendancePage = () => {
       alert(`Failed to update attendance. Error: ${err.message}`);
     }
   };
-  
-  
+
   return (
     <div className="min-h-screen p-6">
-      {viewMode ? (
-        <>
-          <h2 className="text-2xl font-bold mb-4">Class Schedule for {format(selectedDate, "yyyy-MM-dd")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {classSchedules.map((schedule) => (
-              <div key={schedule.id} className="p-4 border rounded bg-white">
-                <h3 className="font-bold">{schedule.courseName}</h3>
-                <p>{schedule.startTime} - {schedule.endTime}</p>
-                <button
-                  className="text-blue-500 underline"
-                  onClick={() => fetchAttendanceDetails(schedule)}
-                >
-                  Edit Attendance
-                </button>
-              </div>
-            ))}
-          </div>
-          <DatePicker
-            selected={selectedDate}
-            onChange={(date) => setSelectedDate(date)}
-            dateFormat="yyyy/MM/dd"
-            className="mt-4 p-2 border rounded"
-          />
-        </>
+      {loading ? (
+        <div className="flex justify-center items-center">
+          <ClipLoader size={50} color={"#000"} loading={loading} />
+        </div>
       ) : (
         <>
-          <h2 className="text-2xl font-bold mb-4">Edit Attendance</h2>
-          <table className="w-full bg-white shadow rounded">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Roll No</th>
-                <th>Present</th>
-                <th>Absent</th>
-                <th>Permission</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendance.map((student) => (
-                <tr key={student.id}>
-                  <td>{student.name}</td>
-                  <td>{student.rollNo}</td>
-                  <td>
-                    <input
-                      type="radio"
-                      name={`status-${student.id}`}
-                      checked={student.status === "Present"}
-                      onChange={() => handleStatusChange(student.id, "Present")}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="radio"
-                      name={`status-${student.id}`}
-                      checked={student.status === "Absent"}
-                      onChange={() => handleStatusChange(student.id, "Absent")}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="radio"
-                      name={`status-${student.id}`}
-                      checked={student.status === "Permission"}
-                      onChange={() => handleStatusChange(student.id, "Permission")}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mt-4">
-            <button
-              onClick={handleAttendanceSubmit}
-              className="bg-blue-500 text-white py-2 px-4 rounded"
-            >
-              Save Attendance
-            </button>
-          </div>
+          {viewMode ? (
+            <>
+              <h2 className="text-2xl font-bold mb-4">Class Schedule for {format(selectedDate, "yyyy-MM-dd")}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {classSchedules.map((schedule) => (
+                  <div key={schedule.id} className="p-4 border rounded bg-white">
+                    <h3 className="font-bold">{schedule.courseName}</h3>
+                    <p>{schedule.startTime} - {schedule.endTime}</p>
+                    <button
+                      className="text-blue-500 underline"
+                      onClick={() => fetchAttendanceDetails(schedule)}
+                    >
+                      Edit Attendance
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <DatePicker
+                selected={selectedDate}
+                onChange={(date) => setSelectedDate(date)}
+                dateFormat="yyyy/MM/dd"
+                className="mt-4 p-2 border rounded"
+              />
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold mb-4">Edit Attendance</h2>
+              <table className="w-full bg-white shadow rounded">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Roll No</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendance.map((student) => (
+                    <tr key={student.id}>
+                      <td>{student.name}</td>
+                      <td>{student.rollNo}</td>
+                      <td>
+                        <input
+                          type="radio"
+                          name={student.id}
+                          value="Present"
+                          checked={student.status === "Present"}
+                          onChange={() => handleStatusChange(student.id, "Present")}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="radio"
+                          name={student.id}
+                          value="Absent"
+                          checked={student.status === "Absent"}
+                          onChange={() => handleStatusChange(student.id, "Absent")}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="radio"
+                          name={student.id}
+                          value="Permission"
+                          checked={student.status === "Permission"}
+                          onChange={() => handleStatusChange(student.id, "Permission")}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button
+                className="mt-4 py-2 px-4 bg-blue-500 text-white rounded"
+                onClick={handleAttendanceSubmit}
+              >
+                Submit Attendance
+              </button>
+            </>
+          )}
         </>
       )}
+      {error && <div className="text-red-500 mt-4">{error}</div>}
     </div>
   );
 };

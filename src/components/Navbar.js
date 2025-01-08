@@ -48,13 +48,13 @@ const Navbar = () => {
           <Link to="/courses" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
             <FontAwesomeIcon icon={faChalkboardTeacher} className="mr-3" /> Courses
           </Link>
-          <Link to="/students" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
+          {/* <Link to="/students" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
             <FontAwesomeIcon icon={faUserGraduate} className="mr-3" /> Students
-          </Link>
+          </Link> */}
           <Link to="/attendance" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
             <FontAwesomeIcon icon={faClipboardList} className="mr-3" /> Attendance
           </Link>
-          <Link to="/exams" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
+          {/* <Link to="/exams" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
             <FontAwesomeIcon icon={faCalendarAlt} className="mr-3" /> Exams
           </Link>
           <Link to="/grades" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
@@ -78,8 +78,8 @@ const Navbar = () => {
           </Link>
           <Link to="/settings" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
             <FontAwesomeIcon icon={faCog} className="mr-3" /> Settings
-          </Link>
-          <Link to="/logout" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
+          </Link> */}
+          <Link to="/" className="block py-3 px-4 rounded-lg hover:bg-gray-700 flex items-center">
             <FontAwesomeIcon icon={faSignOutAlt} className="mr-3" /> Logout
           </Link>
         </nav>
